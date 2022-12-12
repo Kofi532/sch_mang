@@ -1,11 +1,41 @@
-{% load static %}
-{{ disp }}
-{% for k in disp  %}
-<p>
-    {{ k.firstname }}
-    {{ k.middlename }}
-    {{ k.lastname }}
-</p>
+<style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #D6EEEE;
+    }
+    </style>
+    {{ schname.school }}
+<table>
+    <tr>
+      <th>Student ID</th>
+      <th>Firstname</th>
+      <th>Middlename</th>
+      <th>Lastname</th>
+      <th>Level</th>
+      <th>Fee</th>
+      <th>Balance</th>
+      <th>Last Update</th>
+    </tr>
+    {% for x in disp %}
+    <tr>
+      <td>{{ x.stu_id }}</td>
+      <td>{{ x.firstname }}</td>
+      <td>{{ x.middlename }}</td>
+      <td>{{ x.lastname }}</td>
+      <td>{{ x.level }}</td>
+      <td>{{ x.fee }}</td>
+      <td>{{ x.balance }}</td>
+      <td>{{ x.datey }}</td>
+    </tr>
+    {% endfor %}
+  </table>
 
-{% endfor %}
-</table>

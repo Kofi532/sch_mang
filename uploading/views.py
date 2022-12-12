@@ -37,6 +37,7 @@ def index(request):
         ff = list(dfs['school'])
         sch = ff[0]
         data_df = pd.read_excel(wb, engine='openpyxl')
+        data_df['middlename'] = data_df['middlename'].fillna('None')
         data_df['datey'] = date.today()
         data_df['school'] = sch
         liss = list(data_df['stu_id'])
@@ -70,6 +71,7 @@ def index(request):
         di['balance'] = di['fee'] - di['amount']
      #   dp = di.append(dd)
         dp = pd.concat([di, dd])
+        
         #dp['balance'] = dp['fee'] - dp['amount']
         new_data = dp.copy()
         new_data = new_data.dropna()
