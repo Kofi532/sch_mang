@@ -104,12 +104,15 @@ def download2(request):
     response['Content-Disposition'] = name
 
     wb = xlwt.Workbook(encoding='utf-8')
-    ws = wb.add_sheet('Class 1') # this will make a sheet named Users Data
-
+    ws = wb.add_sheet('Class 1') 
+    ws1 = wb.add_sheet('NewAdm-Class1')
+    ws2c = wb.add_sheet('Class 2')
+    ws2a = wb.add_sheet('NewAdm-Class2')
 
     # Create cell styles for both read-only and editable cells
     editable = xlwt.easyxf("protection: cell_locked false;")
     read_only = xlwt.easyxf("")  # "cell_locked true" is default
+
     # Sheet header, first row
     row_num = 0
 
@@ -121,27 +124,71 @@ def download2(request):
 
     for col_num in range(len(columns)):
         ws.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+        ws.col(col_num).width = 7000
+        ws2c.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+        ws2c.col(col_num).width = 7000
     # Sheet body, remaining rows
-    font_style = xlwt.XFStyle()
 
-    rows = fees_update.objects.all().filter(school = sch).filter(level = 'Class 1').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance', 'amount' )
+    columns = ['firstname' , 'middlename', 'lastname', 'fee' ]
+    for col_num in range(len(columns)):
+        ws1.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+        ws1.col(col_num).width = 7000
+        ws2a.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+        ws2a.col(col_num).width = 7000
+
+
+    rows = fees_update.objects.all().filter(school = sch).filter(level = 'Class 1').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )
+    c1 = pd.DataFrame(fees_update.objects.values().all().filter(school = sch).filter(level = 'Class 1').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' ))
+    shape = c1.shape
+    shape = shape[1]
     for row in rows:
         row_num += 1
-        for col_num in range(len(rows)):
+        for col_num in range(shape):##check this one
             ws.write(row_num, col_num, row[col_num],  read_only)
+            ws.col(col_num).width = 7000
     
-    df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = 'Class 1'))
+    row_num = 0
+    rows = fees_update.objects.all().filter(school = sch).filter(level = 'Class 2').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )
+    c1 = pd.DataFrame(fees_update.objects.values().all().filter(school = sch).filter(level = 'Class 2').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' ))
+    shape = c1.shape
+    shape = shape[1]
+    for row in rows:
+        row_num += 1
+        for col_num in range(shape):##check this one
+            ws2c.write(row_num, col_num, row[col_num],  read_only)
+            ws2c.col(col_num).width = 7000
+
+
+    df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = 'Class 1').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )) ##add payment editable
     df['amount'] = 0
+    shape = df.shape
+    shape = shape[1]
     listt = list(df['amount'])
     for x in range(len(listt)):
-        col_num = 6
+        col_num = shape-1
         ws.write(x+1, col_num, listt[x], editable)
 
+    df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = 'Class 2').values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )) ##add payment editable
+    df['amount'] = 0
+    shape = df.shape
+    shape = shape[1]
+    listt = list(df['amount'])
+    for x in range(len(listt)):
+        col_num = shape-1
+        ws2c.write(x+1, col_num, listt[x], editable)     
+    
+    for k in range(30): ##add new person editable
+        for r in range(30):
+            ws2a.write(k+1, r, '', editable) 
+            ws1.write(k+1, r, '', editable) 
 
 
-        # Protect worksheet - all cells will be read-only by default
-    ws.protect = True  # defaults to False
+    ws.protect = True
+    ws1.protect = True
+    ws2c.protect = True
+    ws2a.protect = True
     ws.password = "kofi"
+
 
     wb.save(response)
 
