@@ -197,7 +197,7 @@ def download2(request):
     return response
 
 
-def download3(request):
+def download4(request):
     username = None
     usernamed = request.user.username
     df = pd.DataFrame(use.objects.all().values())
@@ -210,8 +210,8 @@ def download3(request):
     response['Content-Disposition'] = name
 
     wb = xlwt.Workbook(encoding='utf-8')
-    ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
-   # ree = ['Creche']
+   # ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
+    ree = ['Class 1']
     for t in ree:
         ws = wb.add_sheet(t) 
         ws1 = wb.add_sheet(t+'NewAdm')
@@ -275,7 +275,7 @@ def download3(request):
 
     return response
 
-def download4(request):
+def download3(request):
     buffer = io.BytesIO()
     workbook = xlsxwriter.Workbook(buffer)
     username = None
@@ -292,17 +292,41 @@ def download4(request):
 
     f1= workbook.add_format()
     ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
-   # ree = ['Creche']
+  #  ree = ['Class 1']
     for t in ree:
         worksheet = workbook.add_worksheet(t)
         ws1 = workbook.add_worksheet(t+'NewAdm')
-
+        worksheet.protect()
+        ws1.protect()
         row_num = 0
-        columns = ['stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance', 'amount' ]
+        columns = ['number', 'stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance','total  paid', 'amount' ]
         for col_num in range(len(columns)):
             f1.set_bold(True)
             worksheet.write(row_num, col_num, columns[col_num], f1) 
-            worksheet.set_column(row_num, col_num, 25)
+            worksheet.set_column(row_num, col_num, 20)
+
+        rows = fees_update.objects.all().filter(school = sch).filter(level = t).values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee','balance', 'amount' )
+        c1 = pd.DataFrame(fees_update.objects.values().all().filter(school = sch).filter(level = t).values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance', 'amount' ))
+        shape = c1.shape
+        shape = shape[1]
+        for row in rows:
+            row_num += 1
+            for col_num in range(shape):##check this one
+                worksheet.write(row_num, col_num+1, row[col_num])
+                worksheet.write(row_num, shape +1, 0, unlocked)
+
+
+
+
+        columns = ['number', 'firstname' , 'middlename', 'lastname', 'fee' ]
+        row_num = 0
+        for col_num in range(len(columns)):
+            ws1.write(row_num, col_num, columns[col_num], f1)  # at 0 row 0 column 
+            ws1.set_column(row_num, col_num, 20)
+
+        for k in range(30): ##add new person editable
+            for r in range(100):
+                ws1.write(k+1, r, '', unlocked) 
 
     workbook.close()
     buffer.seek(0)
