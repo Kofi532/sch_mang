@@ -16,3 +16,5 @@ class fees_update(models.Model):
     datey = models.DateField(max_length=40, default= date.today(),null=True)
     def __str__(self):
         return self.stu_id
+
+#['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']

@@ -1,0 +1,3 @@
+[console_scripts]
+nbdev_build_docs_patched = fileresponse.scripts:nbdev_build_docs_patched
+

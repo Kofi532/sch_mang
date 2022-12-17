@@ -1,0 +1,145 @@
+Metadata-Version: 2.1
+Name: django-fileresponse
+Version: 0.1.0
+Summary: Serving files directly from Django
+Home-page: https://github.com/ephes/django_fileresponse/tree/main/
+Author: Jochen Wersdörfer
+Author-email: jochen-djangofileresponse@wersdoerfer.de
+License: Apache Software License 2.0
+Keywords: web nbdev async asyncio Django asgi wsgi
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: License :: OSI Approved :: Apache Software License
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: pip
+Requires-Dist: packaging
+Requires-Dist: Django (>=3.1)
+Requires-Dist: aiofiles
+Requires-Dist: aiobotocore
+Provides-Extra: dev
+Requires-Dist: nbdev ; extra == 'dev'
+Requires-Dist: django-extensions ; extra == 'dev'
+Requires-Dist: uvicorn[standard] ; extra == 'dev'
+Requires-Dist: gunicorn ; extra == 'dev'
+Requires-Dist: nb-black ; extra == 'dev'
+Requires-Dist: pandas ; extra == 'dev'
+Requires-Dist: matplotlib ; extra == 'dev'
+Requires-Dist: gevent ; extra == 'dev'
+Requires-Dist: httpx ; extra == 'dev'
+Requires-Dist: requests ; extra == 'dev'
+Requires-Dist: minio ; extra == 'dev'
+Requires-Dist: aiohttp (<4) ; extra == 'dev'
+
+# Welcome to django_fileresponse
+> Serve files directly from Django.
+
+
+`django_fileresponse` is a library that allows you to serve files directly from Django.
+
+## Features of django_fileresponse
+
+`django_fileresponse` provides the following features for developers:
+
+- **Use asyncio to serve files with high concurrency** directly from Django.
+- Uses [aiofiles](https://github.com/Tinche/aiofiles) to **asynchronously read from filesystem** and [aiobotocore](https://github.com/aio-libs/aiobotocore) to **asynchronously read from s3 compatible object stores**
+
+## Installing
+
+`django_fileresponse` is on PyPI so you can just run `pip install django_fileresponse`.
+
+## Replace Default ASGIHandler
+
+You have to replace Djangos `ASGIHandler`, because it synchronously calls `__next__` in [for part in response](https://github.com/django/django/blob/66af94d56ea08ccf8d906708a6cc002dd3ab24d3/django/core/handlers/asgi.py#L242) which makes it impossible to await reading from a filesystem/object-store.
+
+So you have to replace the default `ASGIHandler` in `asgi.py`.
+
+So instead of building your application like this:
+
+```python
+from django.core.asgi import get_asgi_application
+
+application = get_asgi_application()
+```
+
+
+    <IPython.core.display.Javascript object>
+
+
+You have to import a modified ASGIHandler from fileresponse:
+
+```python
+from fileresponse.asgi import get_asgi_application
+
+application = get_asgi_application()
+```
+
+
+    <IPython.core.display.Javascript object>
+
+
+If you use a different mechanism to launch your application, you could also just import the modified `AsyncFileASGIHandler` directly:
+
+```python
+from fileresponse.handlers import AsyncFileASGIHandler
+
+django.setup(set_prefix=False)
+application = AsyncFileASGIHandler()
+```
+
+
+    <IPython.core.display.Javascript object>
+
+
+## How to use Async Fileresponses in your Views
+
+Add functions below to your `views.py`
+
+### Serving from Filesystem
+
+```python
+from fileresponse.http import AiofileFileResponse as AiofileFileResponse
+
+
+async def get_file(request, path):
+    file_path = Path(path)
+    return AiofileFileResponse(file_path)
+```
+
+
+    <IPython.core.display.Javascript object>
+
+
+### Serve Files from an S3 Compatible Object Store
+
+```python
+from fileresponse.http import AiobotocoreFileResponse
+
+
+async def get_file(request, key):
+    bucket = settings.FILERESPONSE_S3_ACCESS_KEY_ID
+    return AiobotocoreFileResponse(bucket, key, chunk_size=4096)
+```
+
+
+    <IPython.core.display.Javascript object>
+
+
+## Settings
+
+### Example Settings for an S3 Compatible Object Store
+
+```
+FILERESPONSE_S3_ACCESS_KEY_ID="minioadmin"
+FILERESPONSE_S3_SECRET_ACCESS_KEY="minioadmin"
+FILERESPONSE_S3_REGION="us-west-2"
+FILERESPONSE_S3_STORAGE_BUCKET_NAME="fileresponse"
+FILERESPONSE_S3_ENDPOINT_URL="http://localhost:9000"
+```
+
+

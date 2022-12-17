@@ -9,6 +9,8 @@ import xlwt
 import numpy as np
 import xlsxwriter
 from xlwt import Workbook, Worksheet, easyxf
+import io
+from django.http import FileResponse
 
 # Create your views here.
 def adduser(request):
@@ -98,7 +100,7 @@ def download2(request):
     df = df[df['username'] == usernamed]
     ff = list(df['school'])
     sch = ff[0] 
-    response = HttpResponse(content_type='application/ms-excel')
+    response = HttpResponse(content_type='application/vnd.ms-excel')
     today = str(date.today())
     name = 'attachment;'+' filename = '+ today +'.xls'
     response['Content-Disposition'] = name
@@ -195,3 +197,114 @@ def download2(request):
     return response
 
 
+def download3(request):
+    username = None
+    usernamed = request.user.username
+    df = pd.DataFrame(use.objects.all().values())
+    df = df[df['username'] == usernamed]
+    ff = list(df['school'])
+    sch = ff[0] 
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    today = str(date.today())
+    name = 'attachment;'+' filename = '+ today +'.xls'
+    response['Content-Disposition'] = name
+
+    wb = xlwt.Workbook(encoding='utf-8')
+    ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
+   # ree = ['Creche']
+    for t in ree:
+        ws = wb.add_sheet(t) 
+        ws1 = wb.add_sheet(t+'NewAdm')
+
+        # Create cell styles for both read-only and editable cells
+        editable = xlwt.easyxf("protection: cell_locked false;")
+        read_only = xlwt.easyxf("")  # "cell_locked true" is default
+
+        # Sheet header, first row
+        row_num = 0
+
+        font_style = xlwt.XFStyle()
+        font_style.font.bold = True
+
+
+        columns = ['stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance', 'amount' ]
+
+        for col_num in range(len(columns)):
+            ws.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+            ws.col(col_num).width = 7000
+        # Sheet body, remaining rows
+
+        columns = ['firstname' , 'middlename', 'lastname', 'fee' ]
+        for col_num in range(len(columns)):
+            ws1.write(row_num, col_num, columns[col_num], font_style) # at 0 row 0 column 
+            ws1.col(col_num).width = 7000
+
+
+        rows = fees_update.objects.all().filter(school = sch).filter(level = t).values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )
+        c1 = pd.DataFrame(fees_update.objects.values().all().filter(school = sch).filter(level = t).values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' ))
+        shape = c1.shape
+        shape = shape[1]
+        for row in rows:
+            row_num += 1
+            for col_num in range(shape):##check this one
+                ws.write(row_num, col_num, row[col_num],  read_only)
+                ws.col(col_num).width = 7000
+        
+
+
+        df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = t).values_list('stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance' )) ##add payment editable
+        df['amount'] = 0
+        shape = df.shape
+        shape = shape[1]
+        listt = list(df['amount'])
+        for x in range(len(listt)):
+            col_num = shape-1
+            ws.write(x+1, col_num, listt[x], editable)
+
+        for k in range(30): ##add new person editable
+            for r in range(30):
+                ws1.write(k+1, r, '', editable) 
+
+
+      #  ws.protect = True
+      #  ws1.protect = True
+      #  ws.password = "kofi"
+
+
+    wb.save(response)
+
+    return response
+
+def download4(request):
+    buffer = io.BytesIO()
+    workbook = xlsxwriter.Workbook(buffer)
+    username = None
+    usernamed = request.user.username
+    df = pd.DataFrame(use.objects.all().values())
+    df = df[df['username'] == usernamed]
+    ff = list(df['school'])
+    sch = ff[0] 
+    today = str(date.today())
+    # Create some cell formats with protection properties.
+    unlocked = workbook.add_format({'locked': False})
+    locked   = workbook.add_format({'locked': True})
+
+
+    f1= workbook.add_format()
+    ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
+   # ree = ['Creche']
+    for t in ree:
+        worksheet = workbook.add_worksheet(t)
+        ws1 = workbook.add_worksheet(t+'NewAdm')
+
+        row_num = 0
+        columns = ['stu_id', 'firstname' , 'middlename', 'lastname', 'fee', 'balance', 'amount' ]
+        for col_num in range(len(columns)):
+            f1.set_bold(True)
+            worksheet.write(row_num, col_num, columns[col_num], f1) 
+            worksheet.set_column(row_num, col_num, 25)
+
+    workbook.close()
+    buffer.seek(0)
+
+    return FileResponse(buffer, as_attachment=True, filename='upload.xlsx')

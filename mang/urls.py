@@ -23,6 +23,6 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path("add/", uvs.adduser, name='approve'),
     path("display/", uvs.display, name='display'),
-    path("download/", uvs.download2, name='download'),
+    path("download/", uvs.download3, name='download'),
 
 ]
