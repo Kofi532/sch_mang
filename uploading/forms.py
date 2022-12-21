@@ -1,4 +1,8 @@
 from django import forms
+from .models import sch_name
 
-class UploadFileForm(forms.Form):
-    file = forms.FileField()
+class PostForm(forms.ModelForm):
+
+    class Meta:
+        model = sch_name
+        fields = ['Full_School_Name']

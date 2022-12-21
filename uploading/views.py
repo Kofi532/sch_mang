@@ -6,9 +6,8 @@ from uploading.models import fees_update
 import pandas as pd
 from django.utils import timezone
 from datetime import date
-from users.models import use
+from users.models import use, sch_reg
 from operator import add
-from .forms import UploadFileForm
 from django.http import HttpResponseBadRequest
 from django import forms
 from django.template import RequestContext
@@ -17,6 +16,8 @@ from itertools import islice
 import os
 from django.core.files.storage import FileSystemStorage
 import numpy as np 
+
+
 
 def indexv(request):
     if "GET" == request.method:
@@ -33,7 +34,7 @@ def indexv(request):
         worksheet = wb["Sheet1"]
         print(worksheet)
         excel_data = list()
-        # iterating over the rows and
+        # iterating over the rows andFF
         # getting value from each cell in row
         for row in worksheet.iter_rows():
             row_data = list()
@@ -120,7 +121,8 @@ def index(request):
         wb = openpyxl.load_workbook(excel_file)
 
         # getting a particular sheet by name out of many sheets
-        ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
+        ree = ['Creche','K.G1', 'K.G2','Class1', 'Class2', 'Class3', 'Class4', 'Class5', 'Class6', 'J.H.S1', 'J.H.S2', 'J.H.S3']
+        #ree = ['Creche','K.G 1', 'K.G 2']
         for i in ree:
            #"Class 1NewAdm"
             
@@ -134,15 +136,24 @@ def index(request):
             username = None
             username = request.user.username 
             dfs = pd.DataFrame(use.objects.all().values())
+            dfsr = pd.DataFrame(sch_reg.objects.all().values())
+            dfsr = dfsr[dfsr['username'] == username]
+            ffr = list(dfsr['school_code'])
+            ffs = list(dfsr['full_sch'])
+            fullsch = ffs[0]
+            schr = ffr[0]
             dfs = dfs[dfs['username'] == username]
             ff = list(dfs['school'])
             sch = ff[0]
             df['middlename'] = df['middlename'].fillna('None')
             df['datey'] = date.today()
-            df['school'] = sch
+            #df['school'] = sch
+            df['school_name'] = fullsch
+            df['school'] = schr
             df['level'] = i
             df['numbering'] = np.arange(len(df))
-            dfp = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = i))
+            df['number'] = df['numbering']
+            dfp = pd.DataFrame(fees_update.objects.all().values().filter(school = schr).filter(level = i))
             if list(dfp) == []:
                 dfp = pd.DataFrame({'stu_id': pd.Series(dtype='str'),
                     'firstname': pd.Series(dtype='str'),
@@ -152,6 +163,7 @@ def index(request):
                     'fee': pd.Series(dtype='float'),
                     'balance': pd.Series(dtype='float'),
                     'school': pd.Series(dtype='str'),
+                    'school_name': pd.Series(dtype='str'),
                     'datey': pd.Series(dtype='str')})
             else:
                 dfp = dfp.copy()
@@ -160,13 +172,13 @@ def index(request):
             df['numbering'] = df['numbering']+leng
             my_list = list(df['numbering'])
             my_list = [str(x) for x in my_list]
-            inn = 'C1'
-            df['stu_id'] = ['GP'+inn+'-' +x  for x in my_list]
+            inn = i
+            df['stu_id'] = [inn+schr+'-' +x  for x in my_list]
             df['amount'] = 0
             df['balance'] = df['fee'] - df['amount']
             df['level'] = i
     #['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
-            com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
+            com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school','school_name', 'datey']
             df = df[com]
             df = df.dropna()
             for index, row in df.iterrows():
@@ -180,11 +192,13 @@ def index(request):
                 model.fee = row['fee']
                 model.balance = row['balance']
                 model.school = row['school']
+                model.school_full = row['school_name']
                 model.datey = row['datey']
                 model.save()
-
-
-        ree = ['Creche','K.G 1', 'K.G 2','Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'J.H.S 1', 'J.H.S 2', 'J.H.S 3']
+#        return render(request, 'upload.html', {})
+    
+        ree = ['Creche','K.G1', 'K.G2', 'Class1', 'Class2', 'Class3', 'Class4', 'Class5', 'Class6', 'J.H.S1', 'J.H.S2', 'J.H.S3']
+        #ree = ['Creche','K.G 1', 'K.G 2']
         for ii in ree:
             worksheet = wb[ii]
             data = worksheet.values
@@ -201,7 +215,7 @@ def index(request):
             sch = ff[0]
             df['middlename'] = df['middlename'].fillna('None')
             df['datey'] = date.today()
-            df['school'] = sch
+            df['school'] = schr
             df['level'] = ii
     #['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
             com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
@@ -210,7 +224,7 @@ def index(request):
             df = df.dropna()
             liss = list(df['stu_id'])
             lis = list(set(liss))
-            dfp = pd.DataFrame(fees_update.objects.all().values().filter(school = sch))
+            dfp = pd.DataFrame(fees_update.objects.all().values().filter(school = schr))
             if list(dfp) == []:
                 dfp = pd.DataFrame({'stu_id': pd.Series(dtype='str'),
                     'firstname': pd.Series(dtype='str'),
@@ -231,12 +245,12 @@ def index(request):
             df['balance'] = df['fee'] - df['newamount']
             df['middlename'] = df['middlename'].fillna('None')
             df['datey'] = date.today()
-            df['school'] = sch   
+            df['school'] = schr   
             df['level'] = ii
             df['fee'] = 1000     
             list2 = list(df['stu_id'])
             for i in list2:
-                fees_update.objects.all().filter(school = sch).filter(stu_id = i).delete()
+                fees_update.objects.all().filter(school = schr).filter(stu_id = i).delete()
             for index, row in df.iterrows():
                 model = fees_update()
                 model.stu_id = row['stu_id']
@@ -250,6 +264,6 @@ def index(request):
                 model.school = row['school']
                 model.datey = row['datey']
                 model.save()
-
+            
         return render(request, 'upload.html', {})
 

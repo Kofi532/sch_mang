@@ -14,6 +14,7 @@ class fees_update(models.Model):
     balance = models.FloatField(max_length=12, default='',null=True)
     school = models.CharField(max_length=12, default='',null=True)
     datey = models.DateField(max_length=40, default= date.today(),null=True)
+    school_full = models.CharField(max_length=30, default='',null=True)
     def __str__(self):
         return self.stu_id
 
