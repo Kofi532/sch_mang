@@ -6,7 +6,7 @@ from uploading.models import fees_update
 import pandas as pd
 from django.utils import timezone
 from datetime import date
-from users.models import use, sch_reg
+from users.models import use, sch_reg, act, class_fee
 from operator import add
 from django.http import HttpResponseBadRequest
 from django import forms
@@ -16,98 +16,9 @@ from itertools import islice
 import os
 from django.core.files.storage import FileSystemStorage
 import numpy as np 
+import itertools
+import math
 
-
-
-def indexv(request):
-    if "GET" == request.method:
-        return render(request, 'upload.html', {})
-    else:
-        form = UploadFileForm(request.POST, request.FILES)
-        excel_file = request.FILES["excel_file"]
-
-        # you may put validations here to check extension or file size
-
-        wb = openpyxl.load_workbook(excel_file)
-
-        # getting a particular sheet by name out of many sheets
-        worksheet = wb["Sheet1"]
-        print(worksheet)
-        excel_data = list()
-        # iterating over the rows andFF
-        # getting value from each cell in row
-        for row in worksheet.iter_rows():
-            row_data = list()
-            for cell in row:
-                row_data.append(str(cell.value))
-            excel_data.append(row_data)
-# ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount','datey']   
-        username = None
-        username = request.user.username 
-        dfs = pd.DataFrame(use.objects.all().values())
-        dfs = dfs[dfs['username'] == username]
-        ff = list(dfs['school'])
-        sch = ff[0]
-        data_df = pd.read_excel(wb, engine='openpyxl')
-        data_df['middlename'] = data_df['middlename'].fillna('None')
-        data_df['datey'] = date.today()
-        data_df['school'] = sch
-        liss = list(data_df['stu_id'])
-        lis = list(set(liss)) #list of excel stu_id
-        df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch))
-        
-        if list(df) == []:
-            df = pd.DataFrame({'stu_id': pd.Series(dtype='str'),
-                   'firstname': pd.Series(dtype='str'),
-                   'lastname': pd.Series(dtype='str'),
-                   'level': pd.Series(dtype='str'),
-                   'amount': pd.Series(dtype='float'),
-                   'fee': pd.Series(dtype='float'),
-                   'balance': pd.Series(dtype='float'),
-                   'school': pd.Series(dtype='str'),
-                   'datey': pd.Series(dtype='str')})
-        else:
-            df = df.copy()
-            df = df.drop('id', axis=1)
-
-        dff = df.loc[df['stu_id'].isin(lis)]
-        list2 = list(dff['stu_id'])
-        list2 = list(set(list2))#students from db in excel list 
-        dv = data_df[~data_df['stu_id'].isin(list2)] #list taken out from the excel data \\ new stu
-        dd = df[~df['stu_id'].isin(list2)]
-        #dk = data_df[data_df.stu_id != list2]
-        dff['amount'] = list(map(add, list(dff['amount']), list(data_df['amount'])))
-        #dff['amount'] = dff['amount'] + data_df['amount']
-        #di = dv.append(dff) #here going
-        di = pd.concat([dv, dff])
-        di['balance'] = di['fee'] - di['amount']
-     #   dp = di.append(dd)
-        dp = pd.concat([di, dd])
-
-        #dp['balance'] = dp['fee'] - dp['amount']
-        new_data = dp.copy()
-        new_data = new_data.dropna()
-        new_data = new_data.sort_values(by='datey')
- #       new_data = new_data.sort_values(by='datey',ascending=False)
-        fees_update.objects.all().filter(school = sch).delete()
-
-        for index, row in new_data.iterrows():
-            model = fees_update()
-            model.stu_id = row['stu_id']
-            model.firstname = row['firstname']
-            model.middlename = row['middlename']
-            model.lastname = row['lastname']
-            model.level = row['level']
-            model.amount = row['amount']
-            model.fee = row['fee']
-            model.balance = row['balance']
-            model.school = row['school']
-            model.datey = row['datey']
-            model.save()
-
-        ## add your the excel, dclear rows in db, upload df to db
-
-        return render(request, 'upload.html', {"excel_data":excel_data})
 
 
 def index(request):
@@ -119,10 +30,21 @@ def index(request):
         # you may put validations here to check extension or file size
 
         wb = openpyxl.load_workbook(excel_file)
-
+        username = None
+        usernamed = request.user.username 
         # getting a particular sheet by name out of many sheets
         ree = ['Creche','K.G1', 'K.G2','Class1', 'Class2', 'Class3', 'Class4', 'Class5', 'Class6', 'J.H.S1', 'J.H.S2', 'J.H.S3']
         #ree = ['Creche','K.G 1', 'K.G 2']
+        dfs = pd.DataFrame(use.objects.all().values().filter(username = usernamed))
+        if list(dfs) == []:
+            dfs = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed))
+        code = list(dfs['school'])
+        code = code[0]
+        df_act = pd.DataFrame(act.objects.all().values())
+        df_act = df_act[df_act['school_code'] == code]
+        term = list(df_act['active_term']) 
+        term = term[0]
+
         for i in ree:
            #"Class 1NewAdm"
             
@@ -135,17 +57,24 @@ def index(request):
             df = pd.DataFrame(data, index=idx, columns=cols)
             username = None
             username = request.user.username 
-            dfs = pd.DataFrame(use.objects.all().values())
-            dfsr = pd.DataFrame(sch_reg.objects.all().values())
-            dfsr = dfsr[dfsr['username'] == username]
-            ffr = list(dfsr['school_code'])
+            dfs = pd.DataFrame(use.objects.all().values().filter(username = usernamed))
+            if list(dfs) == []:
+                dfs = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed))
+            dfsr = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed))
+            ffr = list(dfsr['school'])
             ffs = list(dfsr['full_sch'])
             fullsch = ffs[0]
             schr = ffr[0]
-            dfs = dfs[dfs['username'] == username]
             ff = list(dfs['school'])
             sch = ff[0]
+            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school_code = sch).filter(classes =i))
+            claz_df = list(claz_df['fee'])
+            clazfee = claz_df[0]
             df['middlename'] = df['middlename'].fillna('None')
+            df['mother_name'] = df['mother_name'].fillna('None')
+            df['father_name'] = df['father_name'].fillna('None')
+            df['mother_contact'] = df['mother_contact'].fillna('None')
+            df['father_contact'] = df['father_contact'].fillna('None')
             df['datey'] = date.today()
             #df['school'] = sch
             df['school_name'] = fullsch
@@ -153,6 +82,7 @@ def index(request):
             df['level'] = i
             df['numbering'] = np.arange(len(df))
             df['number'] = df['numbering']
+            df['fee'] = clazfee
             dfp = pd.DataFrame(fees_update.objects.all().values().filter(school = schr).filter(level = i))
             if list(dfp) == []:
                 dfp = pd.DataFrame({'stu_id': pd.Series(dtype='str'),
@@ -165,10 +95,20 @@ def index(request):
                     'school': pd.Series(dtype='str'),
                     'school_name': pd.Series(dtype='str'),
                     'datey': pd.Series(dtype='str')})
+#['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount','amountpaid_term1', 'amountpaid_term2', 'amountpaid_term3','fee', 'balance', 'school', 'datey', 'school_full', 'mother_name', 'mother_contact', 'father_name', 'father_contact']
             else:
                 dfp = dfp.copy()
                 dfp = dfp.drop('id', axis=1)
-            leng = len(list(dfp['stu_id']))+ 1
+            if len(dfp['stu_id']) == 0:
+                leng = 1
+            else:
+                dfp['new'] = dfp["stu_id"].str.split("-", n = 1, expand = False)
+                leng = list(dfp['new'])
+                leng = [item[1] for item in leng]
+                leng = [float(i) for i in leng]
+                leng = max(leng)+1
+                leng = math.trunc(leng)
+           # leng = len(list(dfp['stu_id']))+ 1
             df['numbering'] = df['numbering']+leng
             my_list = list(df['numbering'])
             my_list = [str(x) for x in my_list]
@@ -177,8 +117,9 @@ def index(request):
             df['amount'] = 0
             df['balance'] = df['fee'] - df['amount']
             df['level'] = i
-    #['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
-            com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school','school_name', 'datey']
+            df['school_full'] = fullsch
+#['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount','amountpaid_term1', 'amountpaid_term2', 'amountpaid_term3','fee', 'balance', 'school', 'datey', 'school_full', 'mother_name', 'mother_contact', 'father_name', 'father_contact']
+            com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school','school_name', 'datey', 'school_full', 'mother_name', 'mother_contact', 'father_name', 'father_contact']
             df = df[com]
             df = df.dropna()
             for index, row in df.iterrows():
@@ -194,6 +135,10 @@ def index(request):
                 model.school = row['school']
                 model.school_full = row['school_name']
                 model.datey = row['datey']
+                model.mother_name = row['mother_name']
+                model.father_name = row['father_name']
+                model.mother_contact = row['mother_contact']
+                model.father_contact = row['father_contact']
                 model.save()
 #        return render(request, 'upload.html', {})
     
@@ -209,18 +154,23 @@ def index(request):
             df = pd.DataFrame(data, index=idx, columns=cols)
             username = None
             username = request.user.username 
-            dfs = pd.DataFrame(use.objects.all().values())
-            dfs = dfs[dfs['username'] == username]
+            dfs = pd.DataFrame(use.objects.all().values().filter(username = usernamed))
+            if list(dfs) == []:
+                dfs = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed))
             ff = list(dfs['school'])
             sch = ff[0]
+            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school_code = sch).filter(classes =ii))
+            claz_df = list(claz_df['fee'])
+            clazfee = claz_df[0]
             df['middlename'] = df['middlename'].fillna('None')
             df['datey'] = date.today()
             df['school'] = schr
             df['level'] = ii
+            df['fee'] = clazfee
     #['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
-            com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'datey']
+           # com = ['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount', 'fee', 'balance', 'school', 'amount', 'datey']
            # df.columns = com
-            df = df[com]
+            #df = df[com]
             df = df.dropna()
             liss = list(df['stu_id'])
             lis = list(set(liss))
@@ -234,36 +184,106 @@ def index(request):
                     'fee': pd.Series(dtype='float'),
                     'balance': pd.Series(dtype='float'),
                     'school': pd.Series(dtype='str'),
-                    'datey': pd.Series(dtype='str')})
+                    'datey': pd.Series(dtype='str'),
+                    'amountpaid_term1': pd.Series(dtype='float'),
+                    'amountpaid_term2': pd.Series(dtype='float'),
+                    'amountpaid_term3': pd.Series(dtype='float'),
+                    })
             else:
                 dfp = dfp.copy()
                 dfp = dfp.drop('id', axis=1)
             dff = dfp.loc[dfp['stu_id'].isin(lis)]
-            dff_list = list(dff['amount'])
+            dff_list = list(dff['amountpaid_'+term]) #amountpaid-term1
             df_list = list(df['amount'])
+            wix = list(df['stu_id'])
             df['newamount'] = list(map(add, dff_list, df_list))
-            df['balance'] = df['fee'] - df['newamount']
+            if term == 'term1':
+                df['balance'] = df['fee'] - df['newamount']
+            if term == 'term2':
+                df['balance'] = 2*(df['fee']) - df['newamount'] - df['amountpaid_term1']
+            if term == 'term3':
+                df['balance'] = 3*(df['fee']) - df['newamount'] - df['amountpaid_term1'] - df['amountpaid_term2']
+     #       df['balance'] = df['fee'] - df['newamount']
             df['middlename'] = df['middlename'].fillna('None')
             df['datey'] = date.today()
             df['school'] = schr   
             df['level'] = ii
-            df['fee'] = 1000     
+            df['fee'] = clazfee
+            if term == 'term1':
+                df['amountpaid_term1'] = list(df['newamount'])
+                df['amountpaid_term2'] = list(dff['amountpaid_term2'])
+                df['amountpaid_term3'] = list(dff['amountpaid_term3'])
+            if term == 'term2':               
+                df['amountpaid_term1'] = list(dff['amountpaid_term1'])
+                df['amountpaid_term2'] = list(df['newamount'])
+                df['amountpaid_term3'] = list(dff['amountpaid_term3'])
+            if term == 'term3':
+                df['amountpaid_term1'] = list(dff['amountpaid_term1'])
+                df['amountpaid_term2'] = list(df['amountpaid_term2'])
+                df['amountpaid_term3'] = list(df['newamount'])
             list2 = list(df['stu_id'])
-            for i in list2:
-                fees_update.objects.all().filter(school = schr).filter(stu_id = i).delete()
-            for index, row in df.iterrows():
-                model = fees_update()
-                model.stu_id = row['stu_id']
-                model.firstname = row['firstname']
-                model.middlename = row['middlename']
-                model.lastname = row['lastname']
-                model.level = row['level']
-                model.amount = row['newamount']
-                model.fee = row['fee']
-                model.balance = row['balance']
-                model.school = row['school']
-                model.datey = row['datey']
-                model.save()
+            newamn = list(df['newamount'])##
+            bal = list(df['balance'])
+            dat = list(df['datey'])
+            am1 = list(df['amountpaid_term1'])
+            am2 = list(df['amountpaid_term2'])
+            am3 = list(df['amountpaid_term3'])
+            fee = list(df['fee'])
+            for a,b,c,d,e,f,g,h in zip(list2, newamn, bal, dat, am1, am2, am3, fee):
+                fees_update.objects.filter(stu_id=a).update(amount=b, balance=c, datey=d, amountpaid_term1=e, amountpaid_term2=f, amountpaid_term3=g, fee=h)
+            #for (a,b,c,d,e,f,g) in zip(list2, newamn, bal, dat, am1, am2, am3):
             
         return render(request, 'upload.html', {})
 
+            # for i in list2:
+            #     fees_update.objects.all().filter(school = schr).filter(stu_id = i).delete()
+            # for index, row in df.iterrows():
+            #     model = fees_update()
+            #     if term == 'term1':
+            #         model.amountpaid_term1 = row['newamount']
+            #         model.amountpaid_term2 = row['amountpaid_term2']
+            #         model.amountpaid_term3 = row['amountpaid_term3']
+            #     if term == 'term2':
+            #         model.amountpaid_term2 = row['newamount']
+            #         model.amountpaid_term1 = row['amountpaid_term1']
+            #         model.amountpaid_term3 = row['amountpaid_term3']
+            #     if term == 'term3':
+            #         model.amountpaid_term3 = row['newamount']
+            #         model.amountpaid_term1 = row['amountpaid_term2']
+            #         model.amountpaid_term3 = row['amountpaid_term3']                    
+            #     model.stu_id = row['stu_id']
+            #     model.firstname = row['firstname']
+            #     model.middlename = row['middlename']
+            #     model.lastname = row['lastname']
+            #     model.level = row['level']
+            #     model.fee = row['fee']
+            #     model.balance = row['balance']
+            #     model.school = row['school']
+            #     model.datey = row['datey']
+            #     model.save()
+
+
+def fetch(request):
+    username = None
+    usernamed = request.user.username 
+    dfs = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed ))
+    ff = list(dfs['school'])
+    sch = ff[0]
+    df = pd.DataFrame(fees_update.objects.all().values().filter(school = sch))
+    ree = ['Creche','K.G1', 'K.G2', 'Class1', 'Class2', 'Class3', 'Class4', 'Class5', 'Class6', 'J.H.S1', 'J.H.S2', 'J.H.S3']
+    for z in ree:
+        dft = pd.DataFrame(fees_update.objects.all().values().filter(school = sch).filter(level = z))
+        prom_id = list(df['stu_id'])
+        level_id = list(df['level'])
+        position = ree.index(level_id[0])
+        pos1 = ree[position]
+        if pos1 == ree[-1]:
+            pos2 = ree[0]
+        else:
+            pos2 = ree[position+1]
+        prom_id = [i.replace(pos1, pos2) for i in prom_id ]
+        level_id =[i.replace(pos1, pos2) for i in level_id ]
+        for a,b in zip(prom_id, level_id):
+            fees_update.objects.filter(school =sch).update(stu_id = a, amount=0, balance=0, datey=date.today(), amountpaid_term1=0, amountpaid_term2=0, amountpaid_term3=0, fee=0, level = b)
+    return render(request, 'fetch.html')
+#['stu_id', 'firstname', 'middlename', 'lastname', 'level', 'amount','amountpaid_term1', 'amountpaid_term2', 'amountpaid_term3','fee', 'balance', 'school', 'datey']

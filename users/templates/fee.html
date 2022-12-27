@@ -1,7 +1,13 @@
+{% csrf_token %}
+<h3>Welcome {{ schf }}</h3>
+<br>
+<a href="/">Home</a>
+
+
 <form method="post" enctype="multipart/form-data">
 
     {% csrf_token %}
-    {% for field in form %}
+    {% for field in f_form %}
     <div>
         <p>{{ field.label }}: <br> {{ field }}</p>
         {% for error in field.errors %}
@@ -13,11 +19,10 @@
     <button class="btn btn-primary w-100 py-3" type="submit">Submit</button>
 </form>
 
-<h4>Your users</h4>
-{% for x in active %}
+<h4>Your fees</h4>
+{% for x in cfees %}
 <tr>
-    {{ x.username }}
-    <br>
+    <p>{{ x.classes }}:     {{ x.fee }}</p>
 </tr>
 
 

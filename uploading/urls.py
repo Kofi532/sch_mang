@@ -6,4 +6,5 @@ app_name = "uploading"
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('fetch/', views.fetch, name='fetch'),
 ]

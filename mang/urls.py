@@ -16,6 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from users import views as uvs
+from report import views as rvs
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,5 +26,8 @@ urlpatterns = [
     path("add/", uvs.adduser, name='approve'),
     path("display/", uvs.display, name='display'),
     path("download/", uvs.download3, name='download'),
-
+    path("fees/", uvs.fees, name='fees'),
+    path("addsub/", rvs.report_reg, name='subj'),
+    path("downloadsub/", rvs.download_sub, name='download_subj'),
+    path("uploadsub/", rvs.upload_report, name='upload_subj'),
 ]
