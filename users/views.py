@@ -66,7 +66,6 @@ def adduser(request):
         #return redirect("upload.html")
         #return render_to_response("student.html")
 
-        
     else:
         return render(request, 'unauth.html', {})
 

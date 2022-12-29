@@ -67,7 +67,7 @@ def index(request):
             schr = ffr[0]
             ff = list(dfs['school'])
             sch = ff[0]
-            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school_code = sch).filter(classes =i))
+            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school = sch).filter(classes =i))
             claz_df = list(claz_df['fee'])
             clazfee = claz_df[0]
             df['middlename'] = df['middlename'].fillna('None')
@@ -159,7 +159,7 @@ def index(request):
                 dfs = pd.DataFrame(sch_reg.objects.all().values().filter(username = usernamed))
             ff = list(dfs['school'])
             sch = ff[0]
-            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school_code = sch).filter(classes =ii))
+            claz_df = pd.DataFrame(class_fee.objects.all().values().filter(school = sch).filter(classes =ii))
             claz_df = list(claz_df['fee'])
             clazfee = claz_df[0]
             df['middlename'] = df['middlename'].fillna('None')

@@ -30,4 +30,5 @@ urlpatterns = [
     path("addsub/", rvs.report_reg, name='subj'),
     path("downloadsub/", rvs.download_sub, name='download_subj'),
     path("uploadsub/", rvs.upload_report, name='upload_subj'),
+    path("reportcards/", rvs.report_cards, name='report_cards'),
 ]
